@@ -5,5 +5,5 @@ from .forms import DummyConfirmationForm
 from . import models
 
 def get_confirmation_form(payment):
-	return {'form': DummyConfirmationForm(payment=payment), 'method': 'get',
-			'action': reverse('mamona-dummy-decide', kwargs={'payment_id': payment.id})}
+    return {'form': DummyConfirmationForm(payment=payment), 'method': 'get',
+            'action': reverse('mamona-dummy-decide', kwargs={'payment_id': payment.id})}

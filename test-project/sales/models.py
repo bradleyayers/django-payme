@@ -1,5 +1,5 @@
 from django.db import models
-from order.models import UnawareOrder
+from ..order.models import UnawareOrder
 from mamona.models import build_payment_model
 
 # We build the final Payment model here, in external app,

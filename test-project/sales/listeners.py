@@ -4,9 +4,9 @@ from mamona import signals
 
 def return_urls_query_listener(sender, instance=None, urls=None, **kwargs):
 	url = 'http://%s%s' % (
-			Site.objects.get_current().domain,
-			reverse('show-order', kwargs={'order_id': instance.order.id})
-			)
+		Site.objects.get_current().domain,
+		reverse('show-order', kwargs={'order_id': instance.order.id})
+	)
 	urls.update({'paid': url, 'failure': url})
 
 def order_items_query_listener(sender, instance=None, items=None, **kwargs):

@@ -4,22 +4,22 @@ from django.core.urlresolvers import reverse
 from ...forms import ConfirmationForm
 from ...utils import get_backend_settings
 
+from . import settings
 
-class PaypalConfirmationForm(ConfirmationForm):
-    invoice = forms.IntegerField(widget=forms.HiddenInput())
-    first_name = forms.CharField(required=False, widget=forms.HiddenInput())
-    last_name = forms.CharField(required=False, widget=forms.HiddenInput())
-    email = forms.EmailField(required=False, widget=forms.HiddenInput())
-    city = forms.CharField(required=False, widget=forms.HiddenInput())
-    zip = forms.CharField(required=False, widget=forms.HiddenInput())
-    country = forms.CharField(required=False, widget=forms.HiddenInput())
-    amount = forms.DecimalField(widget=forms.HiddenInput())
-    currency_code = forms.CharField(widget=forms.HiddenInput())
-    notify_url = forms.CharField(required=False, widget=forms.HiddenInput())
-    business = forms.EmailField(widget=forms.HiddenInput())
-    cmd = forms.CharField(widget=forms.HiddenInput(), initial='_cart')
-    upload = forms.CharField(widget=forms.HiddenInput(), initial='1')
-    charset = forms.CharField(widget=forms.HiddenInput(), initial='utf-8')
+
+class SecurePayConfirmationForm(ConfirmationForm):
+    def __init__(self, *args, **kwargs):
+        # Turn settings like FORM_TABLE_BORDER into hidden fields on the form.
+        for setting in settings.__all__:
+            if not setting.starts_with('FORM_'):
+                continue
+            value = getattr(settings, setting)
+            if value is not None:
+                # turn FORM_TABLE_BORDER into table_border
+                name = setting[5:].lower()
+                field = forms.CharField(initial=value, widget=forms.HiddenInput())
+                self.fields.insert(0, name, field)
+
 
     def __init__(self, *args, **kwargs):
         super(PaypalConfirmationForm, self).__init__(*args, **kwargs)
