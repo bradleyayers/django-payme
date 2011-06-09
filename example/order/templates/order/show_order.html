@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block content %}
+{% load i18n %}
+<h1>Order summary</h1>
+<p>
+Order status is: <strong>{{ order.get_status_display }}</strong>
+</p>
+<table>
+    <thead>
+        <tr>
+            <th>{% trans "No." %}</th>
+            <th>{% trans "Item" %}</th>
+            <th>{% trans "Unit price" %}</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in order.item_set.all %}
+        <tr>
+            <td>{{ forloop.counter }}</td>
+            <td>{{ item.name }}</td>
+            <td>{{ item.price|floatformat:2 }}</td>
+        </tr>
+        {% endfor %}
+        <tr>
+            <th colspan="2">{% trans "Total" %}:</th>
+            <td>{{ order.total|floatformat:2 }}</td>
+        </tr>
+</table>
+{% endblock %}

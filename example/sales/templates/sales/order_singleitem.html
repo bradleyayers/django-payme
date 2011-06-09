@@ -12,12 +12,12 @@ First of all, we demonstrate single item sale via <a href="http://www.paypal.com
 Using this, you may also support author of Mamona.
 </p>
 <form action="{% url mamona-process-order %}" method="POST">
-	<p>
-	Would you like to make a <strong>{{ order.name }}</strong> for just <strong>{{ order.total }} {{ order.currency }}</strong>?
-	</p>
-	<input type="hidden" name="order_id" value="{{ order.pk }}" />
-	<input type="hidden" name="backend" value="{{ backend }}" />
-	<input type="submit" value="Yes, I will gladly donate to such a decent man!" />
+    <p>
+    Would you like to make a <strong>{{ order.name }}</strong> for just <strong>{{ order.total }} {{ order.currency }}</strong>?
+    </p>
+    <input type="hidden" name="order_id" value="{{ order.pk }}" />
+    <input type="hidden" name="backend" value="{{ backend }}" />
+    <input type="submit" value="Yes, I will gladly donate to such a decent man!" />
 </form>
 
 <h2>Approach 2: More complex order</h2>

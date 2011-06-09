@@ -1,23 +1,19 @@
 # -*- coding: utf-8 -*-
-import os
-
-PROJECT_ROOT = os.path.dirname(__file__)
-
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
 
 ADMINS = (
-	# ('Your Name', 'your_email@domain.com'),
+    # ('Your Name', 'your_email@domain.com'),
 )
 
 MANAGERS = ADMINS
 
 DATABASES = {
-		'default': {
-			'ENGINE': 'sqlite3',
-			'NAME': 'test-project.db',
-			}
-		}
+    'default': {
+        'ENGINE': 'sqlite3',
+        'NAME': 'test-project.db',
+    }
+}
 
 # Local time zone for this installation. Choices can be found here:
 # http://en.wikipedia.org/wiki/List_of_tz_zones_by_name
@@ -55,51 +51,39 @@ SECRET_KEY = 'hdaw2jet30@z0sm+zl$y_+8vrem2-mih5)(e^d@ng8@6m6wfth'
 
 # List of callables that know how to import templates from various sources.
 TEMPLATE_LOADERS = (
-	'django.template.loaders.filesystem.load_template_source',
-	'django.template.loaders.app_directories.load_template_source',
-#	 'django.template.loaders.eggs.load_template_source',
+    'django.template.loaders.filesystem.load_template_source',
+    'django.template.loaders.app_directories.load_template_source',
+#     'django.template.loaders.eggs.load_template_source',
 )
 
 MIDDLEWARE_CLASSES = (
-	'django.middleware.common.CommonMiddleware',
-	'django.contrib.sessions.middleware.SessionMiddleware',
-	'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.middleware.common.CommonMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
 )
 
-ROOT_URLCONF = 'urls'
+ROOT_URLCONF = 'example.urls'
 
 TEMPLATE_DIRS = (
-	# Put strings here, like "/home/html/django_templates" or "C:/www/django/templates".
-	# Always use forward slashes, even on Windows.
-	# Don't forget to use absolute paths, not relative paths.
+    # Put strings here, like "/home/html/django_templates" or "C:/www/django/templates".
+    # Always use forward slashes, even on Windows.
+    # Don't forget to use absolute paths, not relative paths.
 )
 
 INSTALLED_APPS = (
-#	'django.contrib.auth',
-	'django.contrib.contenttypes',
-	'django.contrib.sessions',
-	'django.contrib.sites',
-	'mamona',
-	'mamona.backends.dummy',
-	'mamona.backends.paypal',
-	'order',
-	'sales',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.sites',
+    'mamona',
+    'example.order',
+    'example.sales',
 )
 
-MAMONA_ACTIVE_BACKENDS = (
-	'dummy',
-	'paypal',
-)
-MAMONA_BACKENDS_SETTINGS = {
-	'paypal': {
-		'url': 'https://www.paypal.com/cgi-bin/webscr',			# real payments URL
-#		'url': 'https://www.sandbox.paypal.com/cgi-bin/webscr',	# test payments URL
-#		'return_url': 'http://www.example.com/success/',		# global override
-		'email': 'michal.salaban@gmail.com',
-	},
+MAMONA_BACKENDS = {
+    'dummy': {},
+    'paypal': {
+        'url': 'https://www.paypal.com/cgi-bin/webscr',  # real payments URL
+        'email': 'michal.salaban@gmail.com',
+    },
+    'securepay': {},
 }
-
-try:
-	execfile(os.path.join(PROJECT_ROOT, 'local_settings.py'))
-except IOError:
-	pass

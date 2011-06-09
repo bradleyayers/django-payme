@@ -1,9 +1,10 @@
 from django.db import models
-from django.conf import settings
 from django.utils.translation import ugettext_lazy as _
+from django.utils.importlib import import_module
 from datetime import datetime
 from .abstract_mixin import AbstractMixin
 from . import signals
+from . import settings
 
 
 PAYMENT_STATUS_CHOICES = (
@@ -27,12 +28,14 @@ class PaymentFactory(models.Model, AbstractMixin):
     class Meta:
         abstract = True
 
-    def get_processor(self):
-        ppath = 'mamona.backends.%s.processor' % self.backend
+    @property
+    def processor(self):
         try:
-            return getattr(__import__(ppath).backends, self.backend).processor
-        except None:#ImportError:
-            raise ValueError("Backend '%s' is not available or provides no processor." % self.backend)
+            backend = import_module(self.backend, package="mamona.backends")
+            return backend.processor
+        except (ImportError, AttributeError):
+            raise ValueError("Backend '%s' is not available or provides no "
+                             "processor." % self.backend)
 
     def change_status(self, new_status):
         """Always change payment's status via this method. Otherwise the signal
@@ -44,9 +47,10 @@ class PaymentFactory(models.Model, AbstractMixin):
                                             old_status=old_status, new_status=new_status)
 
     def on_payment(self, amount=None):
-        """Launched by backend when payment receives any new money. It defaults to
-        complete payment, but can optionally accept received amount as a parameter
-        to handle partial payments.
+        """
+        Launched by backend when payment receives any new money. It defaults to
+        complete payment, but can optionally accept received amount as a
+        parameter to handle partial payments.
         """
         self.paid_on = datetime.now()
         if amount:
@@ -75,8 +79,10 @@ class PaymentFactory(models.Model, AbstractMixin):
         signals.return_urls_query.send(sender=type(self), instance=self, urls=urls)
         return urls['failure']
 
-    def get_items(self):
-        """Retrieves item list using signal query. Listeners must fill
+    @property
+    def items(self):
+        """
+        Retrieves item list using signal query. Listeners must fill
         'items' list with at least one item. Each item is expected to be
         a dictionary, containing at least 'name' element and optionally
         'unit_price' and 'quantity' elements. If not present, 'unit_price'
@@ -86,27 +92,27 @@ class PaymentFactory(models.Model, AbstractMixin):
         consistient with Payment.amount. Otherwise the final amount may
         differ and lead to unpredictable results, depending on the backend used.
         """
+        default = {"unit_price": 0, "quantity": 1}
         items = []
         signals.order_items_query.send(sender=type(self), instance=self, items=items)
-        # XXX: sanitization and filling with defaults - do we need it? may be costly.
-        if len(items) == 1 and not items[0].has_key('unit_price'):
-            items[0]['unit_price'] = self.amount
-            return items
+        if len(items) == 1:
+            items[0].setdefault('unit_price', self.amount)
         for item in items:
+            # update the item with the default values from *default*
+            for key, value in default.iteritems():
+                item.setdefault(key, value)
             assert item.has_key('name')
-            if not item.has_key('unit_price'):
-                item['unit_price'] = 0
-            if not item.has_key('quantity'):
-                item['quantity'] = 1
         return items
 
-    def get_customer_data(self):
-        """Retrieves customer data. The default empty dictionary is
-        already the minimal implementation.
+    @property
+    def customer_data(self):
+        """
+        Retrieves customer data. The default empty dictionary is already the
+        minimal implementation.
         """
         customer = {}
         signals.customer_query.send(sender=self.__class__, instance=self,
-                                         customer=customer)
+                                    customer=customer)
         return customer
 
     @classmethod
@@ -114,12 +120,11 @@ class PaymentFactory(models.Model, AbstractMixin):
         return {'order': models.ForeignKey(order, **kwargs)}
 
     def __unicode__(self):
-
         return u"%s payment of %s%s%s for %s" % (
             self.get_status_display(),
             self.amount,
             self.currency,
-            u" on %s" % self.paid_on if self.status == 'paid' else "",
+            u" on %s" % self.paid_on if self.status == "paid" else "",
             self.order
         )
 
@@ -127,19 +132,16 @@ class PaymentFactory(models.Model, AbstractMixin):
 from django.db.models.loading import cache as app_cache
 from .utils import import_backend_modules
 def build_payment_model(order_class, **kwargs):
-    global Payment
-    global Order
     class Payment(PaymentFactory.construct(order=order_class, **kwargs)):
         pass
-    Order = order_class
-    bknd_models_modules = import_backend_modules('models')
-    for bknd_name, models in bknd_models_modules.items():
-        app_cache.register_models(bknd_name, *models.build_models(Payment))
+    for backend in settings.BACKENDS.keys():
+        models = import_module("mamona.backends.%s.models" % backend)
+        app_cache.register_models("mamona", *models.build_models(Payment))
     return Payment
 
 
-def payment_from_order(order):
-    """Builds payment based on given Order instance."""
-    payment = Payment()
-    signals.payment_query.send(sender=None, order=order, payment=payment)
-    return payment
+#def payment_from_order(order):
+#    """Builds payment based on given Order instance."""
+#    payment = Payment()
+#    signals.payment_query.send(sender=None, order=order, payment=payment)
+#    return payment
