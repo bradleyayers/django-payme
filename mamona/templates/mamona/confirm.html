@@ -1,15 +1,19 @@
-{% extends 'base.html' %}
+{% extends "mamona/base.html" %}
+
 {% load i18n %}
+
 {% block content %}
-{% include 'mamona/snippets/payment_details.html' %}
-<p>
-{% blocktrans with payment.amount|floatformat:2 as amount and payment.currency as currency %}
-You are about to pay <strong>{{ amount }} {{ currency }}</strong>.
-If you are sure, press the button below.
-{% endblocktrans %}
-</p>
-<form action="{{ formdata.action }}" method="{{ formdata.method }}">
-{{ formdata.form }}
-<button type="submit">{% trans "Confirm" %}</button>
+{% include "mamona/includes/payment_details.html" %}
+<p>{% blocktrans with payment.amount|floatformat:2 as amount and payment.currency as currency %}
+You are about to pay <strong>{{ amount }} {{ currency }}</strong>. If you are sure, press the button below.
+{% endblocktrans %}</p>
+
+<form action="{{ form.action }}" method="{{ form.method }}">
+    <table>
+        <tbody>
+            {{ form.as_table }}
+        </tbody>
+    </table>
+    <button type="submit">{% trans "Confirm" %}</button>
 </form>
 {% endblock %}

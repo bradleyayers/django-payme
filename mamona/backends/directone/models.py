@@ -2,7 +2,7 @@
 from django.db import models
 
 
-class SecurePayReceipt(models.Model):
+class DirectOneReceipt(models.Model):
     bill_id = models.CharField(max_length=200)
     field2 = models.CharField(max_length=200)
     approved = models.BooleanField()
@@ -33,3 +33,7 @@ class SecurePayReceipt(models.Model):
     #    names = (x.name for x in self._meta.fields)
     #    exclude = ["id", "payment"]
     #    return '&'.join(("%s=" % n for n in names if n not in exclude))
+    #
+    #@classmethod
+    #def contribute(cls, payment):
+    #    return {'payment': models.OneToOneField(payment)}

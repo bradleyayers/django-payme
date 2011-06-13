@@ -1,20 +1,20 @@
 """
-SecurePay specific settings.
+DirectOne specific settings.
 
 Available settings are in __all__, and are added module-level variables when
 this module is first imported.
 
 Example::
 
-    >>> from mamona.backends.securepay import settings
+    >>> from mamona.backends.directone import settings
     >>> settings.URL
     sandbox = "https://vault.safepay.com.au/cgi-bin/test_payment.pl"
 
-Values for these settings are configurable via the mamona backend settings in
+Values for these settings are configurable via the mamona backends setting in
 the project's ``settings.py``::
 
-    MAMONA_BACKEND_SETTINGS = {
-        "securepay": {
+    MAMONA_BACKENDS = {
+        "directone": {
             "URL": "abcd",
         }
     }

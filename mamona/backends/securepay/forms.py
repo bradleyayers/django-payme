@@ -1,24 +1,27 @@
 from django import forms
 from django.contrib.sites.models import Site
 from django.core.urlresolvers import reverse
-from ...forms import ConfirmationForm
-from ...utils import get_backend_settings
-from .models import PaymentResult
+from ...forms import ConfirmationFormBase
+from .models import SecurePayReceipt
 from . import settings
 
 
-class SecurePayConfirmationForm(ConfirmationForm):
+class SecurePayConfirmationForm(ConfirmationFormBase):
     def __init__(self, *args, **kwargs):
-        # Turn settings like FORM_TABLE_BORDER into hidden fields on the form.
-        for setting in settings.__all__:
+        kwargs["action"] = settings.URL
+        super(SecurePayConfirmationForm, self).__init__(self, *args, **kwargs)
+
+        # Create a hidden field of each of the Secure Pay backend settings.
+        # This means turning a setting like FORM_TABLE_BORDER into a hidden
+        # field "table_border".
+        for setting, value in settings:
             if not setting.starts_with("FORM_"):
                 continue
-            value = getattr(settings, setting)
             if value is not None:
                 # turn FORM_TABLE_BORDER into table_border
-                name = setting[5:].lower()
+                short = setting[5:].lower()
                 field = forms.CharField(initial=value, widget=forms.HiddenInput())
-                self.fields.insert(0, name, field)
+                self.fields.insert(0, short, field)
 
         # Add the order items
         for item in self.payment.items:
@@ -54,16 +57,6 @@ class SecurePayConfirmationForm(ConfirmationForm):
                 reverse('mamona:securepay:callback', args=[self.payment.id]))
             self.add_hidden_field("callback_url", url)
 
-    def add_hidden_field(self, name, value, index=None):
-        """
-        Utility method to add a hidden input to the form.
-        """
-        field = forms.CharField(initial=value, widget=forms.HiddenInput())
-        if index is not None:
-            self.fields.insert(index, name, field)
-        else:
-            # adds the field to the tail
-            self.fields[name] = field
 
     def __init__(self, *args, **kwargs):
         super(PaypalConfirmationForm, self).__init__(*args, **kwargs)

@@ -5,19 +5,19 @@ from django.core.urlresolvers import reverse
 from decimal import Decimal
 
 class UnawareOrder(models.Model):
-    """This is an example of order model, which is unaware of
-    Mamona existence.
     """
+    This is an example of order model, which is unaware of Mamona existence.
+    """
+    STATUSES = (
+        ('s','success'),
+        ('f','failure'),
+        ('p', 'incomplete'),
+    )
     total = models.DecimalField(decimal_places=2, max_digits=8, default=0)
     currency = models.CharField(max_length=3, default='EUR')
-    status = models.CharField(
-            max_length=1,
-            choices=(('s','success'), ('f','failure'), ('p', 'incomplete')),
-            blank=True,
-            default=''
-            )
+    status = models.CharField(max_length=1, choices=STATUSES, blank=True)
 
-    def name(self):
+    def __unicode__(self):
         if self.item_set.count() == 0:
             return u"Empty order"
         elif self.item_set.count() == 1:
@@ -32,15 +32,18 @@ class UnawareOrder(models.Model):
         self.total = total
         self.save()
 
+
 class Item(models.Model):
-    """Basic order item.
     """
-    order = models.ForeignKey(UnawareOrder)
+    Basic order item.
+    """
+    order = models.ForeignKey("order.UnawareOrder")
     name = models.CharField(max_length=20)
     price = models.DecimalField(decimal_places=2, max_digits=8)
 
     def __unicode__(self):
         return self.name
+
 
 def recalculate_total(sender, instance, **kwargs):
     instance.order.recalculate_total()

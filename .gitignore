@@ -4,4 +4,8 @@
 *.sh
 *~
 *.db
+/*.egg-info
+*.komodoproject
+/*-env
+*.sqlite
 local_settings.py

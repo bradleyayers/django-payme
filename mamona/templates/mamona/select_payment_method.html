@@ -1,9 +1,15 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
+
 {% load i18n %}
+
 {% block content %}
-{% include 'mamona/snippets/payment_details.html' %}
+{% include "mamona/snippets/payment_details.html" %}
 <form method="POST">
-    {{ form.as_p }}
-    <input type="submit" value="{% trans "Proceed" %}" />
+    <table>
+        <tbody>
+            {{ form.as_table }}
+        </tbody>
+    </table>
+    <button type="submit">{% trans "Proceed" %}</button>
 </form>
 {% endblock %}

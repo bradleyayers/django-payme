@@ -4,7 +4,7 @@ from django.http import HttpResponseNotFound, HttpResponseRedirect
 from django.core.urlresolvers import reverse
 from django.shortcuts import get_object_or_404, redirect
 from django.views.generic.simple import direct_to_template
-from .models import Payment, Order, payment_from_order
+from django.contrib.contenttypes.models import ContentType
 from .forms import PaymentMethodForm
 from . import settings
 
@@ -28,27 +28,41 @@ def process_order(request):
     return HttpResponseRedirect(url)
 
 
-def process_payment(request, payment_id):
+def prepare(request, ct_pk, obj_pk):
+    ct = get_object_or_404(ContentType, pk=ct_pk)
+    Payment = ct.model_class()  # Payment is some subclass of PaymentBase
+    payment = get_object_or_404(Payment, pk=obj_pk, status=Payment.NEW)
+
+
     """This view processes the specified payment. It checks for backend, validates
     it's availability and asks again for it if something is wrong."""
-    payment = get_object_or_404(Payment, id=payment_id, status='new')
-    if request.method == 'POST' or request.REQUEST.has_key('backend'):
+    payment = get_object_or_404(Payment, id=payment_id, status="new")
+    if request.method == "POST" or request.REQUEST.has_key("backend"):
         data = request.REQUEST
     elif len(settings.ACTIVE_BACKENDS) == 1:
-        data = {'backend': settings.ACTIVE_BACKENDS[0]}
+        data = {"backend": settings.ACTIVE_BACKENDS[0]}
     else:
         data = None
-    bknd_form = PaymentMethodForm(data=data, payment=payment)
-    if bknd_form.is_valid():
-        bknd_form.save()
-        return HttpResponseRedirect(reverse('mamona-confirm-payment',
-                                            kwargs={'payment_id': payment.id}))
-    return direct_to_template(request, 'mamona/select_payment_method.html',
-                              {'payment': payment, 'form': bknd_form})
+    form = PaymentMethodForm(data=data, payment=payment)
+    if form.is_valid():
+        form.save()
+        ct = ContentType.objects.get_for_model(self.payment)
+        return redirect(reverse("mamona:directone:callback",
+                                kwargs={"ct_pk": ct.pk, "obj_pk": payment.pk}))
+    return direct_to_template(request, "mamona/select_payment_method.html",
+                              {"payment": payment, "form": bknd_form})
 
 
-def confirm_payment(request, payment_id):
-    payment = get_object_or_404(Payment, id=payment_id, status='new')
-    formdata = payment.get_processor().get_confirmation_form(payment)
-    return direct_to_template(request, 'mamona/confirm.html',
-                              {'formdata': formdata, 'payment': payment})
+def confirm(request, ct_pk, obj_pk):
+    ct = get_object_or_404(ContentType, pk=ct_pk)
+    Payment = ct.model_class()  # Payment is some subclass of PaymentBase
+    payment = get_object_or_404(Payment, pk=obj_pk, status=Payment.NEW)
+    form = payment.create_form()
+    return direct_to_template(request, "mamona/confirm.html",
+                              {"form": form, "payment": payment})
+
+
+def detail(request, ct_pk, obj_pk):
+    ct = get_object_or_404(ContentType, pk=ct_pk)
+    payment = get_object_or_404(ct.model_class(), pk=obj_pk)
+    return HttpResponse("Payment: " + payment.status)

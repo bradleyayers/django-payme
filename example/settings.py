@@ -11,7 +11,7 @@ MANAGERS = ADMINS
 DATABASES = {
     'default': {
         'ENGINE': 'sqlite3',
-        'NAME': 'test-project.db',
+        'NAME': 'database.sqlite',
     }
 }
 

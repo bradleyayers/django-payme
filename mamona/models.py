@@ -1,147 +1,120 @@
 from django.db import models
 from django.utils.translation import ugettext_lazy as _
 from django.utils.importlib import import_module
+from django.contrib.contenttypes import generic
+from django.contrib.contenttypes.models import ContentType
 from datetime import datetime
-from .abstract_mixin import AbstractMixin
-from . import signals
-from . import settings
+from mamona.backends.securepay.models import SecurePayReceipt
+from mamona.backends.directone.models import DirectOneReceipt
+from mamona.backends import ALL as ALL_BACKENDS
+from mamona import signals
+from mamona import settings
 
 
-PAYMENT_STATUS_CHOICES = (
-    ('new', _("New")),
-    ('in_progress', _("In progress")),
-    ('partially_paid', _("Partially paid")),
-    ('paid', _("Paid")),
-    ('failed', _("Failed")),
-)
+class PaymentBase(models.Model):
+    NEW = "new"
+    IN_PROGRESS = "in progress"
+    PAID = "paid"
+    FAILED = "failed"
 
-
-class PaymentFactory(models.Model, AbstractMixin):
+    STATUSES = (
+        (NEW, _("New")),
+        (IN_PROGRESS, _("In progress")),
+        (PAID, _("Paid")),
+        (FAILED, _("Failed")),
+    )
     amount = models.DecimalField(decimal_places=4, max_digits=20)
     currency = models.CharField(max_length=3)
-    status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='new')
-    backend = models.CharField(max_length=30)
+    status = models.CharField(max_length=20, choices=STATUSES, default='new')
+    backend_class_path = models.CharField(
+            max_length=100, choices=([x.class_path] * 2 for x in ALL_BACKENDS))
     created_on = models.DateTimeField(auto_now_add=True)
     paid_on = models.DateTimeField(blank=True, null=True, default=None)
-    amount_paid = models.DecimalField(decimal_places=4, max_digits=20, default=0)
+
+    # generic relation to receipt
+    receipt_content_type = models.ForeignKey("contenttypes.ContentType",
+                                             blank=True, null=True)
+    receipt_object_id = models.PositiveIntegerField(blank=True, null=True)
+    receipt = generic.GenericForeignKey('receipt_content_type',
+                                        'receipt_object_id')
 
     class Meta:
         abstract = True
+        unique_together = ("receipt_content_type", "receipt_object_id")
+
+    def __unicode__(self):
+        return u"%s payment of %s%s%s" % (
+            self.get_status_display(),
+            self.amount,
+            self.currency,
+            (u" on %s" % self.paid_on) if self.status == self.PAID else "",
+        )
 
     @property
-    def processor(self):
+    def backend_class(self):
         try:
-            backend = import_module(self.backend, package="mamona.backends")
-            return backend.processor
+            return import_module(self.backend_class_path,
+                                 package="mamona.backends")
         except (ImportError, AttributeError):
-            raise ValueError("Backend '%s' is not available or provides no "
-                             "processor." % self.backend)
+            raise ValueError("Backend '%s' is not available"
+                             % self.backend_name)
 
-    def change_status(self, new_status):
-        """Always change payment's status via this method. Otherwise the signal
-        will not be emitted."""
-        old_status = self.status
-        self.status = new_status
-        self.save()
-        signals.payment_status_changed.send(sender=type(self), instance=self,
-                                            old_status=old_status, new_status=new_status)
-
-    def on_payment(self, amount=None):
+    def create_form(self):
         """
-        Launched by backend when payment receives any new money. It defaults to
-        complete payment, but can optionally accept received amount as a
-        parameter to handle partial payments.
+        Convenience method that proxies to ``Backend.create_form()`` using the
+        payment's backend.
         """
-        self.paid_on = datetime.now()
-        if amount:
-            self.amount_paid = amount
-        else:
-            self.amount_paid = self.amount
-        fully_paid = self.amount_paid >= self.amount
-        if fully_paid:
-            self.change_status('paid')
-        else:
-            self.change_status('partially_paid')
-        urls = {}
-        signals.return_urls_query.send(sender=type(self), instance=self, urls=urls)
-        if not fully_paid:
-            try:
-                # Applications do NOT have to define 'partially_paid' URL.
-                return urls['partially_paid']
-            except KeyError:
-                pass
-        return urls['paid']
+        return self.backend_class().create_form(payment=self)
 
-    def on_failure(self):
-        "Launched by backend when payment fails."
-        self.change_status('failed')
-        urls = {}
-        signals.return_urls_query.send(sender=type(self), instance=self, urls=urls)
-        return urls['failure']
+    def save(self, *args, **kwargs):
+        # Overridden to allow status_changed to be emitted
+        if self.pk:
+            old = self.__class__.objects.get(pk=self.pk)
+            status_changed = old.status != self.status
+        else:
+            status_changed = False
+        result = super(PaymentBase, self).save(*args, **kwargs)
+        if status_changed:
+            signals.payment_status_changed.send(
+                    sender=self.__class__, instance=self, old_instance=old)
+        return result
+
+    def clean(self):
+        paid = self.paid_on or self.status in (self.PAID, self.FAILED)
+        if paid:
+            # Fill in any missing values that we might have
+            self.paid_on = self.paid_on or datetime.now()
+            self.status = self.status or self.PAID
+
+    @property
+    def success_url(self):
+        """
+        If defined, the user will be redirect to it after a successful payment.
+        """
+        return None
+
+    @property
+    def failure_url(self):
+        """
+        If not None, the user will be redirected to this URL after a failed
+        payment attempt.
+        """
+        return None
 
     @property
     def items(self):
         """
-        Retrieves item list using signal query. Listeners must fill
-        'items' list with at least one item. Each item is expected to be
-        a dictionary, containing at least 'name' element and optionally
-        'unit_price' and 'quantity' elements. If not present, 'unit_price'
-        and 'quantity' default to 0 and 1 respectively.
-
-        Listener is responsible for providing item list with sum of prices
-        consistient with Payment.amount. Otherwise the final amount may
-        differ and lead to unpredictable results, depending on the backend used.
+        List of ``mamona.items.Item`` objects.
         """
-        default = {"unit_price": 0, "quantity": 1}
-        items = []
-        signals.order_items_query.send(sender=type(self), instance=self, items=items)
-        if len(items) == 1:
-            items[0].setdefault('unit_price', self.amount)
-        for item in items:
-            # update the item with the default values from *default*
-            for key, value in default.iteritems():
-                item.setdefault(key, value)
-            assert item.has_key('name')
-        return items
+        return []
 
     @property
-    def customer_data(self):
+    def customer_details(self):
         """
-        Retrieves customer data. The default empty dictionary is already the
-        minimal implementation.
+        dict of customer data, use SortedDict to preserve order.
         """
-        customer = {}
-        signals.customer_query.send(sender=self.__class__, instance=self,
-                                    customer=customer)
-        return customer
+        return {}
 
-    @classmethod
-    def contribute(cls, order, **kwargs):
-        return {'order': models.ForeignKey(order, **kwargs)}
-
-    def __unicode__(self):
-        return u"%s payment of %s%s%s for %s" % (
-            self.get_status_display(),
-            self.amount,
-            self.currency,
-            u" on %s" % self.paid_on if self.status == "paid" else "",
-            self.order
-        )
-
-
-from django.db.models.loading import cache as app_cache
-from .utils import import_backend_modules
-def build_payment_model(order_class, **kwargs):
-    class Payment(PaymentFactory.construct(order=order_class, **kwargs)):
-        pass
-    for backend in settings.BACKENDS.keys():
-        models = import_module("mamona.backends.%s.models" % backend)
-        app_cache.register_models("mamona", *models.build_models(Payment))
-    return Payment
-
-
-#def payment_from_order(order):
-#    """Builds payment based on given Order instance."""
-#    payment = Payment()
-#    signals.payment_query.send(sender=None, order=order, payment=payment)
-#    return payment
+    @property
+    def content_type(self):
+        return ContentType.objects.get_for_model(self)
