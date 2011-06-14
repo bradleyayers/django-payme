@@ -1,12 +1,13 @@
 # -*- coding: utf-8 -*-
 from django.db import models
 from django.core.urlresolvers import reverse
-
 from decimal import Decimal
+
 
 class UnawareOrder(models.Model):
     """
-    This is an example of order model, which is unaware of Mamona existence.
+    This is an example of order model, which is unaware of django-payme
+    existence.
     """
     STATUSES = (
         ('s','success'),

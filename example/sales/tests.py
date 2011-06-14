@@ -2,7 +2,7 @@ from django.test import TestCase
 from django.core.urlresolvers import reverse
 from django.contrib.sites.models import Site
 from order.models import UnawareOrder
-from mamona.models import Payment
+from payme.models import Payment
 
 from decimal import Decimal
 from random import randint
@@ -58,13 +58,13 @@ class SimpleTest(TestCase):
         p1 = self.o1.payments.create(amount=self.o1.total)
         # request without backend should give us a form
         response = self.client.post(
-                reverse('mamona-process-payment', kwargs={'payment_id': p1.id}),
+                reverse('payme-process-payment', kwargs={'payment_id': p1.id}),
                 follow=True
                 )
         self.assertEqual(response.status_code, 200)
         # this should succeed
         response = self.client.post(
-                reverse('mamona-process-payment', kwargs={'payment_id': p1.id}),
+                reverse('payme-process-payment', kwargs={'payment_id': p1.id}),
                 {'backend': 'dummy'},
                 follow=True
                 )
@@ -72,14 +72,14 @@ class SimpleTest(TestCase):
         self.assertEqual(p1.status, 'in_progress')
         # calling again should fail with 404, as the payment is marked 'in_progress'
         response = self.client.post(
-                reverse('mamona-process-payment', kwargs={'payment_id': p1.id}),
+                reverse('payme-process-payment', kwargs={'payment_id': p1.id}),
                 {'backend': 'dummy'},
                 follow=True
                 )
         self.assertEqual(response.status_code, 404)
         # choose success
         response = self.client.get(
-                reverse('mamona-dummy-do-success', kwargs={'payment_id': p1.id}),
+                reverse('payme-dummy-do-success', kwargs={'payment_id': p1.id}),
                 follow=True
                 )
         p1 = Payment.objects.get(id=p1.id)
@@ -90,7 +90,7 @@ class SimpleTest(TestCase):
                 )
         # re-processing should fail
         response = self.client.post(
-                reverse('mamona-process-payment', kwargs={'payment_id': p1.id}),
+                reverse('payme-process-payment', kwargs={'payment_id': p1.id}),
                 {'backend': 'dummy'},
                 follow=True
                 )
@@ -101,17 +101,17 @@ class SimpleTest(TestCase):
         p2 = self.o2.payments.create(amount=self.o2.total)
         # this should fail with 404
         response = self.client.get(
-                reverse('mamona-dummy-do-success', kwargs={'payment_id': p2.id}),
+                reverse('payme-dummy-do-success', kwargs={'payment_id': p2.id}),
                 follow=True
                 )
         self.assertEqual(response.status_code, 404)
         response = self.client.post(
-                reverse('mamona-process-payment', kwargs={'payment_id': p2.id}),
+                reverse('payme-process-payment', kwargs={'payment_id': p2.id}),
                 {'backend': 'dummy'},
                 follow=True
                 )
         response = self.client.get(
-                reverse('mamona-dummy-do-failure', kwargs={'payment_id': p2.id}),
+                reverse('payme-dummy-do-failure', kwargs={'payment_id': p2.id}),
                 follow=True
                 )
         p2 = Payment.objects.get(id=p2.id)

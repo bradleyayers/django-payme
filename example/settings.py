@@ -74,12 +74,12 @@ INSTALLED_APPS = (
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.sites',
-    'mamona',
+    'django_payme',
     'example.order',
     'example.sales',
 )
 
-MAMONA_BACKENDS = {
+PAYME_BACKENDS = {
     'dummy': {},
     'paypal': {
         'url': 'https://www.paypal.com/cgi-bin/webscr',  # real payments URL

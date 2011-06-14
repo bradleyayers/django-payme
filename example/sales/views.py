@@ -1,10 +1,10 @@
 from django.conf import settings
-from django.http import HttpResponseRedirect, HttpResponseNotAllowed
+from django.http import HttpResponseNotAllowed
 from django.core.urlresolvers import reverse
 from django.views.generic.simple import direct_to_template
-from django.shortcuts import get_object_or_404
-
-from mamona.forms import PaymentMethodForm
+from django.shortcuts import get_object_or_404, redirect
+from django.contrib.contenttypes.models import ContentType
+from payme.forms import PaymentBackendForm
 from example.order.models import UnawareOrder
 from .forms import ItemFormSet
 from .models import Payment
@@ -15,11 +15,11 @@ import random
 def order_singleitem(request):
     # approach 1: single item purchase with predefined backend
     order = UnawareOrder.objects.create()
-    order.item_set.create(name="Donation for Mamona author",
+    order.item_set.create(name="Donation for django-payme author",
                           price=random.random() * 8 + 2)
     payment = Payment(
             order=order,
-            backend_class_path="mamona.backends.directone.DirectOneBackend")
+            backend_class_path="payme.backends.directone.DirectOneBackend")
     payment.full_clean()
     payment.save()
     return direct_to_template(request, "sales/order_singleitem.html",
@@ -27,37 +27,43 @@ def order_singleitem(request):
 
 
 def order_multiitem(request):
-    # approach 2: an order with no payment method (Mamona will ask)
+    # approach 2: an order with no payment method (django-payme will ask)
     order = UnawareOrder()
     if request.method == "POST":
-        formset = ItemFormSet(instance=order, data=request.POST)
-        if formset.is_valid():
+        items_formset = ItemFormSet(instance=order, data=request.POST)
+        if items_formset.is_valid():
             order.save()
-            formset.save()
-            payment = order.payments.create(amount=order.total, currency=order.currency)
-            return redirect(reverse("mamona-process-payment",
-                                    kwargs={"payment_id": payment.id}))
+            items_formset.save()
+            payment = Payment(order=order)
+            payment.full_clean()
+            payment.save()
+            return redirect("payme:prepare", ct_pk=payment.content_type.pk,
+                            obj_pk=payment.pk)
     else:
-        formset = ItemFormSet(instance=order)
+        items_formset = ItemFormSet(instance=order)
     return direct_to_template(request, "sales/order_multiitem.html",
-                              {"order": order, "formset": formset})
+                              {"order": order, "items_formset": items_formset})
 
 
 def order_singlescreen(request):
     # approach 3: single screen (ask for everything)
-    order = UnawareOrder()
-    payment_form = PaymentMethodForm(data=request.POST or None)
-    formset = ItemFormSet(instance=order, data=request.POST or None)
-    if request.method == 'POST':
-        if formset.is_valid() and payment_form.is_valid():
+    if request.method == "POST":
+        order = UnawareOrder()
+        payment = Payment()
+        items_formset = ItemFormSet(data=request.POST, instance=order)
+        backend_form = PaymentBackendForm(data=request.POST, instance=payment)
+        if items_formset.is_valid() and backend_form.is_valid():
             order.save()
-            formset.save()
-            payment = order.payments.create(amount=order.total, currency=order.currency)
-            payment_form.save(payment)
-            return HttpResponseRedirect(
-                    reverse('mamona-confirm-payment', kwargs={'payment_id': payment.id}))
+            payment.order = order
+            items_formset.save()
+            backend_form.save(commit=False)
+            payment.full_clean()
+            payment.save()
+            return redirect("payme:confirm", ct_pk=payment.content_type.pk,
+                            obj_pk=payment.pk)
+    else:
+        backend_form = PaymentBackendForm()
+        items_formset = ItemFormSet()
     return direct_to_template(
-        request,
-        'sales/order_singlescreen.html',
-        {'order': order, 'formset': formset, 'payment_form': payment_form}
-        )
+            request, "sales/order_singlescreen.html",
+            {"items_formset": items_formset, "backend_form": backend_form})

@@ -2,10 +2,10 @@ from django.db import models
 from django.core.urlresolvers import reverse
 from django.contrib.sites.models import Site
 from django.dispatch import receiver
-from mamona.models import PaymentBase
+from payme.models import PaymentBase
 from ..order.models import UnawareOrder
-from mamona import signals
-from mamona.items import Item
+from payme import signals
+from payme.items import Item
 
 
 class Payment(PaymentBase):
@@ -37,6 +37,6 @@ def handler(sender, instance, **kwargs):
     if instance.status == Payment.PAID:
         instance.order.status = "s"
         instance.order.save()
-    elif new_status == Payment.FAILED:
+    elif instance.status == Payment.FAILED:
         instance.order.status = "f"
         instance.order.save()

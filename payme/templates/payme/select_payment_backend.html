@@ -1,0 +1,15 @@
+{% extends "payme/base.html" %}
+
+{% load i18n %}
+
+{% block content %}
+{% include "payme/includes/payment_details.html" %}
+<form method="post" action="{% url payme:prepare payment.content_type.pk payment.pk %}">
+    <table>
+        <tbody>
+            {{ form.as_table }}
+        </tbody>
+    </table>
+    <button type="submit">{% trans "Proceed" %}</button>
+</form>
+{% endblock %}

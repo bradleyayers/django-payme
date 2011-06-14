@@ -1,0 +1,15 @@
+{% extends "payme/base.html" %}
+{% load i18n %}
+{% block content %}
+<p>
+{% trans "You are about to process the following payment via django-payme's dummy module" %}:
+</p>
+<p><strong>{{ payment }}</strong></p>
+<p>
+{% trans "Would you like to finish this payment with success or failure?" %}
+</p>
+<p>
+<a href="{% url payme-dummy-do-success payment.id %}">{% trans "Success" %}</a>
+<a href="{% url payme-dummy-do-failure payment.id %}">{% trans "Failure" %}</a>
+</p>
+{% endblock %}
