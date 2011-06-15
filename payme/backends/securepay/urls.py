@@ -1,7 +1,7 @@
 from django.conf.urls.defaults import patterns, url
 
 
-urlpatterns = patterns('django_payme.backends.securepay.views',
+urlpatterns = patterns('payme.backends.securepay.views',
     #url(r'^bounce/(?P<ct_pk>[^/]+)/(?P<obj_pk>[^/]+)/$', 'bounce', name='bounce'),
     #url(r'^reply/(?P<ct_pk>[^/]+)/(?P<obj_pk>[^/]+)/$', 'callback', name='reply'),
     #url(r'^payment/(?P<ct_pk>[^/]+)/(?P<obj_pk>[^/]+)/$', 'callback', name='payment'),

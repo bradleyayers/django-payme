@@ -87,6 +87,8 @@ class PaymentBase(models.Model):
             # Fill in any missing values that we might have
             self.paid_on = self.paid_on or datetime.now()
             self.status = self.status or self.PAID
+        if not self.backend_class_path and len(settings.BACKENDS) == 1:
+            self.backend_class_path = settings.BACKENDS.keys()[0]
 
     @property
     def success_url(self):
@@ -106,7 +108,7 @@ class PaymentBase(models.Model):
     @property
     def items(self):
         """
-        List of ``django_payme.items.Item`` objects.
+        List of ``payme.items.Item`` objects.
         """
         return []
 

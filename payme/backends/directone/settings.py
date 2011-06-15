@@ -21,6 +21,7 @@ the project's ``settings.py``::
 
 """
 import sys
+from . import DirectOneBackend
 from payme import settings
 
 
@@ -63,7 +64,7 @@ __all__ = (
 )
 
 mod = sys.modules[__name__]
-user_defined = settings.BACKENDS.get("securepay", {})
+user_defined = settings.BACKENDS.get(DirectOneBackend.class_path, {})
 
 # create module-level variables for each of the fields, favouring user defined
 # settings for this backend, and falling back to the built-in defaults defined

@@ -74,7 +74,7 @@ INSTALLED_APPS = (
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.sites',
-    'django_payme',
+    'payme',
     'example.order',
     'example.sales',
 )

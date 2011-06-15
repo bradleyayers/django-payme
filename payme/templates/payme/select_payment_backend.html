@@ -5,6 +5,7 @@
 {% block content %}
 {% include "payme/includes/payment_details.html" %}
 <form method="post" action="{% url payme:prepare payment.content_type.pk payment.pk %}">
+    {% csrf_token %}
     <table>
         <tbody>
             {{ form.as_table }}

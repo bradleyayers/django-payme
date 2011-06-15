@@ -12,7 +12,7 @@ class BackendRegistrationMetaclass(type):
     A metaclass that keeps track of all Backend [sub]classes.
 
     It also adds a *class_path* attribute to the class that its full module path,
-    e.g. django_payme.backends.securepay.SecurePayBackend
+    e.g. payme.backends.securepay.SecurePayBackend
     """
     def __new__(self, name, bases, attrs):
         cls = type.__new__(self, name, bases, attrs)
